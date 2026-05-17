@@ -44,12 +44,15 @@ import { Sexp, Token } from "s-expression";
 ;; <sexp>     ::= symbol | number | bool | string | 
 ;;                (<sexp>+ . <sexp>) | ( <sexp>* )       ##### L3
 */
+//types definitions:
 
 export type Exp = DefineExp | CExp;
 export type AtomicExp = NumExp | BoolExp | StrExp | PrimOp | VarRef;
 export type CompoundExp = AppExp | IfExp | ProcExp | LetExp | LitExp;
-export type CExp =  AtomicExp | CompoundExp;
-
+/*===============myCode=========================
+2.a addition:
+*/
+export type CExp =  AtomicExp | CompoundExp | ClassExp;
 export type Program = {tag: "Program"; exps: Exp[]; }
 export type DefineExp = {tag: "DefineExp"; var: VarDecl; val: CExp; }
 export type NumExp = {tag: "NumExp"; val: number; }
@@ -66,6 +69,12 @@ export type Binding = {tag: "Binding"; var: VarDecl; val: CExp; }
 export type LetExp = {tag: "LetExp"; bindings: Binding[]; body: CExp[]; }
 // L3
 export type LitExp = {tag: "LitExp"; val: SExpValue; }
+/*===============myCode=========================
+2.a addition:
+*/
+export type ClassExp = {tag: "ClassExp"; fields:VarDecl[]; methods:Binding[];  }
+
+
 
 // Type value constructors for disjoint types
 export const makeProgram = (exps: Exp[]): Program => ({tag: "Program", exps: exps});
