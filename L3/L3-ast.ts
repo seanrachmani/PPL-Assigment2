@@ -228,7 +228,10 @@ export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>{
     const fields = classInfo[0];
     const methods = classInfo[1];
     return isGoodFields(fields) && isGoodBindings(methods) ? 
-    //mapv will constinue if unfailure, to the naonymous function that gets Binding and makeClassExp aka AST node
+    //map result map every method binding and pass it to parseMethod
+    //parse method returns result<binding> and mapresult pack all the results<binding> into Binding[]
+    //anonym func gets this array from mapresult and makeClassExp aka AST node
+    //mapv will constinue if unfailure, to the naonymous function 
     mapv(mapResult(parseMethodBinding, methods), (parsedMethods: Binding[]) =>
                                                     makeClassExp(map(makeVarDecl, fields),parsedMethods)):
     makeFailure("Invalid fields or methods for ClassExp");
