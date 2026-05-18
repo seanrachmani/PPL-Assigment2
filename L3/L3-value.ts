@@ -60,9 +60,12 @@ export const makeClass = (fields: VarDecl[], methods: Binding[]): Class =>
 export const isClass = (x: any): x is Class => x.tag === "Class";
 
 
-
-//object
-//no need to save fields bc were substitute them with values
+/*notes
+object
+no need to save fields exps bc were substitute them with values in every method they are showed.
+for example (pair 3 4) is applyproc and we will see the fields and evaluate them, then immediately subsitue the expressions 3 4 with values/
+the only way user talks with object is by methods therefore fields only saved in CLASS, no in Object
+*/
 export type Object = {
     tag: "Object";
     methods: MethodValue[];
