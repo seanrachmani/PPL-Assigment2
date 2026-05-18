@@ -190,7 +190,7 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
     op === "quote" ? 
         isNonEmptyList<Sexp>(params) ? parseLitExp(first(params)) :
         makeFailure(`Bad quote exp: ${params}`) :
-/*===============myCode=========================
+/*=============================================myCode================================================
 2.a addition:
 */ 
     op === "class" ?
@@ -199,20 +199,39 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
         isNonEmptyList<Sexp>(params) ? parseClassExp(params) :
         makeFailure(`Bad class: ${params}`) :
     makeFailure("Never");
+
+
+
+//helper function: parse binding of method and return result of cexp
+//m[1] is the lambada of the method, m[0] name
+//mapv - if you dont fail apply the anonoymous function which we parsed and makebinding
+export const parseMethodBinding = (m: Sexp): Result<Binding> =>
+    isArray(m) && m.length === 2 && isString(m[0]) ?
+    mapv(parseL3CExp(m[1]), (parsedLambada: CExp) => makeBinding(String(m[0]), parsedLambada)) :
+    makeFailure("Bad methos Name");
 /*
 const parseProcExp = (vars: Sexp, body: Sexp[]): Result<ProcExp> =>
     isArray(vars) && allT(isString, vars) ? mapv(mapResult(parseL3CExp, body), (cexps: CExp[]) => 
                                                  makeProcExp(map(makeVarDecl, vars), cexps)) :
     makeFailure(`Invalid vars for ProcExp ${format(vars)}`);
 
-classInfo[0] is fields as sexp
-classInfo[1] is methods
+const [fields,methods] = classInfo ---> AKA: classInfo[0] is fields,classInfo[1] is methods
 */
 export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>{
-
+    const [fields,methods] = classInfo;
+    return  isArray(fields) && !isEmpty(fields) && allT(isString,fields) &&
+            isArray(methods) && !isEmpty(methods) && isGoodBindings(methods) ? 
+            mapv(mapResult(parseMethodBinding, methods), (parsedMethods: Binding[]) =>
+                                                    makeClassExp(map(makeVarDecl, fields),parsedMethods)):
+    makeFailure("Invalid fields or methods for ClassExp");
 }
 
 
+
+
+/*
+/*=============================================myCode================================================
+*/
 // DefineExp -> (define <varDecl> <CExp>)
 export const parseDefine = (params: List<Sexp>): Result<DefineExp> =>
     isNonEmptyList<Sexp>(params) ? 
