@@ -191,8 +191,7 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
         isNonEmptyList<Sexp>(params) ? parseLitExp(first(params)) :
         makeFailure(`Bad quote exp: ${params}`) :
 /*=============================================myCode================================================
-2.a addition:
-*/ 
+*/
     op === "class" ?
         //we pass all params bc the syntax is (class ( <var>+ ) ( <binding>+ ) )
         //so we already have 2 lists of fields, methods. 
@@ -201,27 +200,40 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
     makeFailure("Never");
 
 
-
-//helper function: parse binding of method and return result of cexp
-//m[1] is the lambada of the method, m[0] name
-//mapv - if you dont fail apply the anonoymous function which we parsed and makebinding
+/*
+================helper1===================================
+parse binding of method and return result of cexp
+m[1] is the lambada of the method, m[0] name
+mapv - if you dont fail apply the anonoymous function which we parsed and makebinding
+*/
 export const parseMethodBinding = (m: Sexp): Result<Binding> =>
     isArray(m) && m.length === 2 && isString(m[0]) ?
     mapv(parseL3CExp(m[1]), (parsedLambada: CExp) => makeBinding(String(m[0]), parsedLambada)) :
     makeFailure("Bad method Name");
 /*
-classInfo[0] is fields,classInfo[1] is methods
-makeClassEXP creates AST NODE
+================helper2===================================
+if fields is valid according to syntax, treat it as string[] and not exp
 */
-export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>
-    classInfo.length !=2 ? makeFailure("Expected [fields, methods]") :
-    isArray(classInfo[0]) && !isEmpty(classInfo[0]) && allT(isString,classInfo[0]) &&
-    isArray(classInfo[1]) && !isEmpty(classInfo[1]) && isGoodBindings(classInfo[1]) ? 
-    mapv(mapResult(parseMethodBinding, classInfo[1]), (parsedMethods: Binding[]) =>
-                                                    makeClassExp(map(makeVarDecl, classInfo[0]),parsedMethods)):
-    makeFailure("Invalid fields or methods for ClassExp");
+export const isGoodFields = (fields: Sexp): fields is string[] =>
+    isArray(fields) && !isEmpty(fields) && allT(isString, fields);
 
 /*
+================parser===================================
+makeClassEXP creates AST NODE
+*/
+export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>{
+    if(classInfo.length !=2){
+        return makeFailure("Invalid fields or methods for ClassExp");
+    }
+    const fields = classInfo[0];
+    const methods = classInfo[1];
+    return isGoodFields(fields) && isGoodBindings(methods) ? 
+    //mapv will constinue if unfailure, to the naonymous function that gets Binding and makeClassExp aka AST node
+    mapv(mapResult(parseMethodBinding, methods), (parsedMethods: Binding[]) =>
+                                                    makeClassExp(map(makeVarDecl, fields),parsedMethods)):
+    makeFailure("Invalid fields or methods for ClassExp");
+}
+
 /*=============================================myCode================================================
 */
 
@@ -358,20 +370,19 @@ const unparseLetExp = (le: LetExp) : string =>
     `(let (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, le.bindings).join(" ")}) ${unparseLExps(le.body)})`
 /*
 /*=============================================myCode================================================
-
-helper: unparse binding (our methods whoch are bindings)
+================helper===================================
+unparse binding (our methods whoch are bindings)
 first var is for binding.var from vardecl type, second if for vardecl.var
 val is cexp 
 unparser should print it the way we got it
 */
-const unparseMethod = (bind: Binding): string =>
+export const unparseMethod = (bind: Binding): string =>
     `(${bind.var.var} ${unparseL3(bind.val)})`
-
-
-const unparseClassExpp = (classexp: ClassExp): string =>
-    `(class (${map((param: VarDecl) => param.var, classexp.fields).join(" ")}) (${map((bind: Binding) => unparseMethod(bind) , classexp.methods).join(" ")}))`
-
 /*
+================unparser===================================
+*/
+export const unparseClassExpp = (classexp: ClassExp): string =>
+    `(class (${map((param: VarDecl) => param.var, classexp.fields).join(" ")}) (${map((bind: Binding) => unparseMethod(bind) , classexp.methods).join(" ")}))`
 /*=============================================myCode================================================
 */
 export const unparseL3 = (exp: Program | Exp): string =>
