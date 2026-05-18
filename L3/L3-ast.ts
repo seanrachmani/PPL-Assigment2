@@ -208,19 +208,19 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
 export const parseMethodBinding = (m: Sexp): Result<Binding> =>
     isArray(m) && m.length === 2 && isString(m[0]) ?
     mapv(parseL3CExp(m[1]), (parsedLambada: CExp) => makeBinding(String(m[0]), parsedLambada)) :
-    makeFailure("Bad methos Name");
+    makeFailure("Bad method Name");
 /*
-const [fields,methods] = classInfo ---> AKA: classInfo[0] is fields,classInfo[1] is methods
+classInfo[0] is fields,classInfo[1] is methods
 makeClassEXP creates AST NODE
 */
-export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>{
-    const [fields,methods] = classInfo;
-    return  isArray(fields) && !isEmpty(fields) && allT(isString,fields) &&
-            isArray(methods) && !isEmpty(methods) && isGoodBindings(methods) ? 
-            mapv(mapResult(parseMethodBinding, methods), (parsedMethods: Binding[]) =>
-                                                    makeClassExp(map(makeVarDecl, fields),parsedMethods)):
+export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>
+    classInfo.length !=2 ? makeFailure("Expected [fields, methods]") :
+    isArray(classInfo[0]) && !isEmpty(classInfo[0]) && allT(isString,classInfo[0]) &&
+    isArray(classInfo[1]) && !isEmpty(classInfo[1]) && isGoodBindings(classInfo[1]) ? 
+    mapv(mapResult(parseMethodBinding, classInfo[1]), (parsedMethods: Binding[]) =>
+                                                    makeClassExp(map(makeVarDecl, classInfo[0]),parsedMethods)):
     makeFailure("Invalid fields or methods for ClassExp");
-}
+
 
 
 
