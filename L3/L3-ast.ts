@@ -221,13 +221,10 @@ export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>
                                                     makeClassExp(map(makeVarDecl, classInfo[0]),parsedMethods)):
     makeFailure("Invalid fields or methods for ClassExp");
 
-
-
-
-
 /*
 /*=============================================myCode================================================
 */
+
 // DefineExp -> (define <varDecl> <CExp>)
 export const parseDefine = (params: List<Sexp>): Result<DefineExp> =>
     isNonEmptyList<Sexp>(params) ? 
@@ -359,7 +356,24 @@ const unparseProcExp = (pe: ProcExp): string =>
 
 const unparseLetExp = (le: LetExp) : string => 
     `(let (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, le.bindings).join(" ")}) ${unparseLExps(le.body)})`
+/*
+/*=============================================myCode================================================
 
+helper: unparse binding (our methods whoch are bindings)
+first var is for binding.var from vardecl type, second if for vardecl.var
+val is cexp 
+unparser should print it the way we got it
+*/
+const unparseMethod = (bind: Binding): string =>
+    `(${bind.var.var} ${unparseL3(bind.val)})`
+
+
+const unparseClassExpp = (classexp: ClassExp): string =>
+    `(class (${map((param: VarDecl) => param.var, classexp.fields).join(" ")}) (${map((bind: Binding) => unparseMethod(bind) , classexp.methods).join(" ")}))`
+
+/*
+/*=============================================myCode================================================
+*/
 export const unparseL3 = (exp: Program | Exp): string =>
     isBoolExp(exp) ? valueToString(exp.val) :
     isNumExp(exp) ? valueToString(exp.val) :
@@ -373,4 +387,5 @@ export const unparseL3 = (exp: Program | Exp): string =>
     isLetExp(exp) ? unparseLetExp(exp) :
     isDefineExp(exp) ? `(define ${exp.var.var} ${unparseL3(exp.val)})` :
     isProgram(exp) ? `(L3 ${unparseLExps(exp.exps)})` :
+    isClassExp(exp) ? unparseClassExpp(exp) :
     exp;
