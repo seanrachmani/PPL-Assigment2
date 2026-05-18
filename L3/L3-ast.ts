@@ -48,11 +48,11 @@ import { Sexp, Token } from "s-expression";
 
 export type Exp = DefineExp | CExp;
 export type AtomicExp = NumExp | BoolExp | StrExp | PrimOp | VarRef;
-export type CompoundExp = AppExp | IfExp | ProcExp | LetExp | LitExp;
+export type CompoundExp = AppExp | IfExp | ProcExp | LetExp | LitExp | ClassExp;
 /*===============myCode=========================
 2.a addition:
 */
-export type CExp =  AtomicExp | CompoundExp | ClassExp;
+export type CExp =  AtomicExp | CompoundExp;
 export type Program = {tag: "Program"; exps: Exp[]; }
 export type DefineExp = {tag: "DefineExp"; var: VarDecl; val: CExp; }
 export type NumExp = {tag: "NumExp"; val: number; }
@@ -73,6 +73,7 @@ export type LitExp = {tag: "LitExp"; val: SExpValue; }
 2.a addition:
 */
 export type ClassExp = {tag: "ClassExp"; fields:VarDecl[]; methods:Binding[];  }
+
 
 
 
@@ -101,10 +102,16 @@ export const makeLetExp = (bindings: Binding[], body: CExp[]): LetExp =>
 export const makeLitExp = (val: SExpValue): LitExp =>
     ({tag: "LitExp", val: val});
 
+
+/*===============myCode=========================
+2.a addition:
+*/
+export const makeClassExp = (fields:VarDecl[], methods:Binding[]): ClassExp =>
+({tag: "ClassExp", fields: fields, methods: methods});
+
 // Type predicates for disjoint types
 export const isProgram = (x: any): x is Program => x.tag === "Program";
 export const isDefineExp = (x: any): x is DefineExp => x.tag === "DefineExp";
-
 export const isNumExp = (x: any): x is NumExp => x.tag === "NumExp";
 export const isBoolExp = (x: any): x is BoolExp => x.tag === "BoolExp";
 export const isStrExp = (x: any): x is StrExp => x.tag === "StrExp";
@@ -119,6 +126,10 @@ export const isBinding = (x: any): x is Binding => x.tag === "Binding";
 export const isLetExp = (x: any): x is LetExp => x.tag === "LetExp";
 // L3
 export const isLitExp = (x: any): x is LitExp => x.tag === "LitExp";
+/*===============myCode=========================
+2.a addition:
+*/
+export const isClassExp = (x: any): x is ClassExp => x.tag ==="ClassExp";
 
 // Type predicates for type unions
 export const isExp = (x: any): x is Exp => isDefineExp(x) || isCExp(x);
@@ -126,9 +137,11 @@ export const isAtomicExp = (x: any): x is AtomicExp =>
     isNumExp(x) || isBoolExp(x) || isStrExp(x) ||
     isPrimOp(x) || isVarRef(x);
 export const isCompoundExp = (x: any): x is CompoundExp =>
-    isAppExp(x) || isIfExp(x) || isProcExp(x) || isLitExp(x) || isLetExp(x);
+    isAppExp(x) || isIfExp(x) || isProcExp(x) || isLitExp(x) || isLetExp(x) || isClassExp(x);
 export const isCExp = (x: any): x is CExp =>
     isAtomicExp(x) || isCompoundExp(x);
+
+
 
 // ========================================================
 // Parsing
@@ -177,7 +190,28 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
     op === "quote" ? 
         isNonEmptyList<Sexp>(params) ? parseLitExp(first(params)) :
         makeFailure(`Bad quote exp: ${params}`) :
+/*===============myCode=========================
+2.a addition:
+*/ 
+    op === "class" ?
+        //we pass all params bc the syntax is (class ( <var>+ ) ( <binding>+ ) )
+        //so we already have 2 lists of fields, methods. 
+        isNonEmptyList<Sexp>(params) ? parseClassExp(params) :
+        makeFailure(`Bad class: ${params}`) :
     makeFailure("Never");
+/*
+const parseProcExp = (vars: Sexp, body: Sexp[]): Result<ProcExp> =>
+    isArray(vars) && allT(isString, vars) ? mapv(mapResult(parseL3CExp, body), (cexps: CExp[]) => 
+                                                 makeProcExp(map(makeVarDecl, vars), cexps)) :
+    makeFailure(`Invalid vars for ProcExp ${format(vars)}`);
+
+classInfo[0] is fields as sexp
+classInfo[1] is methods
+*/
+export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>{
+
+}
+
 
 // DefineExp -> (define <varDecl> <CExp>)
 export const parseDefine = (params: List<Sexp>): Result<DefineExp> =>
