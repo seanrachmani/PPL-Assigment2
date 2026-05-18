@@ -210,12 +210,8 @@ export const parseMethodBinding = (m: Sexp): Result<Binding> =>
     mapv(parseL3CExp(m[1]), (parsedLambada: CExp) => makeBinding(String(m[0]), parsedLambada)) :
     makeFailure("Bad methos Name");
 /*
-const parseProcExp = (vars: Sexp, body: Sexp[]): Result<ProcExp> =>
-    isArray(vars) && allT(isString, vars) ? mapv(mapResult(parseL3CExp, body), (cexps: CExp[]) => 
-                                                 makeProcExp(map(makeVarDecl, vars), cexps)) :
-    makeFailure(`Invalid vars for ProcExp ${format(vars)}`);
-
 const [fields,methods] = classInfo ---> AKA: classInfo[0] is fields,classInfo[1] is methods
+makeClassEXP creates AST NODE
 */
 export const parseClassExp = (classInfo: Sexp[]): Result<ClassExp> =>{
     const [fields,methods] = classInfo;
