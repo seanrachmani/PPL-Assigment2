@@ -1,7 +1,7 @@
 // ========================================================
 // Value type definition for L4
 
-import { isPrimOp, CExp, PrimOp, VarDecl } from './L3-ast';
+import { isPrimOp, CExp, PrimOp, VarDecl, Binding } from './L3-ast';
 import { Env, makeEmptyEnv } from './L3-env-env';
 import { append } from 'ramda';
 import { isArray, isNumber, isString } from '../shared/type-predicates';
@@ -42,6 +42,45 @@ export type SymbolSExp = {
     val: string;
 }
 
+/*
+==========================myCode========================================
+*/
+//type of class value
+export type Class = {
+    tag: "Class";
+    fields: VarDecl[];
+    methods: Binding[];
+}
+//constructor
+export const makeClass = (fields: VarDecl[], methods: Binding[]): Class =>
+    ({tag: "Class", fields: fields, methods: methods});
+
+//isClass
+//x is class - return true but also treat x as class type without need for casting later on
+export const isClass = (x: any): x is Class => x.tag === "Class";
+
+
+
+//object
+//no need to save fields bc were substitute them with values
+export type Object = {
+    tag: "Object";
+    methods: MethodValue[];
+}
+
+export type MethodValue = {
+    name: string;
+    val: Value;
+}
+
+export const makeObject = (methods: MethodValue[]): Object =>
+    ({tag: "Object", methods: methods})
+
+export const isObject = (x:any): x is Object => x.tag === "Object";
+
+/*
+==========================myCode========================================
+*/
 export type SExpValue = number | boolean | string | PrimOp | Closure | SymbolSExp | EmptySExp | CompoundSExp;
 export const isSExp = (x: any): x is SExpValue =>
     typeof(x) === 'string' || typeof(x) === 'boolean' || typeof(x) === 'number' ||
