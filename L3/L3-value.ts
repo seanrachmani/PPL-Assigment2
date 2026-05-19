@@ -76,7 +76,7 @@ export type MethodValue = {
     val: Value;
 }
 
-export const makeObject = (methods: MethodValue[]): Object =>
+export const makeObject = (methods: MethodValue[]): L3Object =>
     ({tag: "Object", methods: methods})
 
 export const isObject = (x:any): x is Object => x.tag === "Object";
@@ -85,7 +85,7 @@ export const isObject = (x:any): x is Object => x.tag === "Object";
 ==========================myCode========================================
 */
 export type SExpValue = number | boolean | string | PrimOp | Closure | SymbolSExp | EmptySExp | CompoundSExp 
-                        | Class | Object;
+                        | Class | L3Object;
 export const isSExp = (x: any): x is SExpValue =>
     typeof(x) === 'string' || typeof(x) === 'boolean' || typeof(x) === 'number' ||
     isSymbolSExp(x) || isCompoundSExp(x) || isEmptySExp(x) || isPrimOp(x) || isClosure(x);

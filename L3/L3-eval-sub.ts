@@ -57,7 +57,7 @@ const L3applyProcedure = (proc: Value, args: Value[], env: Env): Result<Value> =
     isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args, env) :
     isClass(proc) ? evalObject(proc, args, env) :
-    isObject(proc) ? applyMethod(proc, args, env) :
+    isObject(proc) ? applyMethod(proc as L3Object, args, env) :
     makeFailure(`Bad procedure ${format(proc)}`);
 
 
@@ -110,14 +110,13 @@ args.slice(1) is parameters for method if parms exists for this fucntion
 */
 
 
-export const applymethod = (obj: L3Object, args: Value[], env: Env): Result<Value> => {
+export const applyMethod = (obj: L3Object, args: Value[], env: Env): Result<Value> => {
     if (!isSymbolSExp(args[0])) return makeFailure("no symbol as required for method call");
     const methodName = args[0].val;
     const method = obj.methods.find(method => method.name === methodName);
     if (!method) return makeFailure(`Unrecognized method: ${methodName}`);
-    return args.length > 1 
-        ? L3applyProcedure(method.val, args.slice(1), env) 
-        : makeOk(method.val);
+    return args.length > 1 ? L3applyProcedure(method.val, args.slice(1), env) : 
+                                makeOk(method.val);
 };
 
 /*
