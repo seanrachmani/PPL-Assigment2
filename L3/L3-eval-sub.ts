@@ -2,10 +2,10 @@
 import { map } from "ramda";
 import { isCExp, isLetExp, isClassExp} from "./L3-ast";
 import { BoolExp, CExp, Exp, IfExp, LitExp, NumExp,
-         PrimOp, ProcExp, Program, StrExp, VarDecl, ClassExp } from "./L3-ast";
+         PrimOp, ProcExp, Program, StrExp, VarDecl, ClassExp, Binding } from "./L3-ast";
 import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLitExp, isNumExp,
              isPrimOp, isProcExp, isStrExp, isVarRef } from "./L3-ast";
-import { makeBoolExp, makeLitExp, makeNumExp, makeProcExp, makeStrExp } from "./L3-ast";
+import { makeBoolExp, makeLitExp, makeNumExp, makeProcExp, makeStrExp, makeBinding } from "./L3-ast";
 import { parseL3Exp } from "./L3-ast";
 import { applyEnv, makeEmptyEnv, makeEnv, Env } from "./L3-env-sub";
 import { isClosure, makeClosure, Closure, Value, makeClass } from "./L3-value";
@@ -30,6 +30,9 @@ const L3applicativeEval = (exp: CExp, env: Env): Result<Value> =>
     isLitExp(exp) ? makeOk(exp.val) :
     isIfExp(exp) ? evalIf(exp, env) :
     isProcExp(exp) ? evalProc(exp, env) :
+        //exp-->value using the class value we defined in L3-value
+    //no need to add object bc it dont have its own exp
+    isClassExp(exp) ? makeOk(makeClass(exp.fields, exp.methods)) :
     isAppExp(exp) ? bind(L3applicativeEval(exp.rator, env), (rator: Value) =>
                         bind(mapResult(param => 
                             L3applicativeEval(param, env), 
@@ -37,9 +40,6 @@ const L3applicativeEval = (exp: CExp, env: Env): Result<Value> =>
                             (rands: Value[]) =>
                                 L3applyProcedure(rator, rands, env))) :
     isLetExp(exp) ? makeFailure('"let" not supported (yet)') :
-    //exp-->value using the class value we defined in L3-value
-    //no need to add object bc it dont have its own exp
-    isClassExp(exp) ? makeOk(makeClass(exp.fields, exp.methods)) :
     makeFailure('Never');
 
 export const isTrueValue = (x: Value): boolean =>
@@ -57,6 +57,118 @@ const L3applyProcedure = (proc: Value, args: Value[], env: Env): Result<Value> =
     isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args, env) :
     makeFailure(`Bad procedure ${format(proc)}`);
+
+/*
+==========================myCode========================================
+
+were taking method renaming, substiting and making it prepare for making object
+when we'll eval operator from class type like pair we will use this function for each method
+bind(something to try, what to do if allok)
+l3applicatative(exp to evaluate, env)
+substitute(what to replace, keys to replace, what to put instead )
+were renaming cexp of method aka the actual meat of the method, then looking for fields in this meat and replacing it with updatedexps from V2L
+*/
+const evalMethod = (method: Binding, fields: string[], updatedExps: CExp[], env:Env): Result<Binding> =>
+    bind(L3applicativeEval(substitute(renameExps([method.val]), fields, updatedExps)[0], env),    
+    (evaluatedValue: Value) => makeOk(makeBinding(method.var.var, valueToLitExp(evaluatedValue))));
+    
+
+
+
+
+/*
+==========================GEMINI========================================
+*/
+
+
+
+
+//step3 create object\
+export const evalClassOperator = (cls: ClassValue, args: Value[], env: Env): Result<Value> => {
+    // מוודאים שקיבלנו את מספר הארגומנטים הנכון עבור השדות
+    if (cls.fields.length !== args.length) {
+        return makeFailure(`Wrong number of arguments passed to class`);
+    }
+
+    // שולפים את המחרוזות של שמות השדות (למשל: ['a', 'b'])
+    const fieldNames = map((f: VarDecl) => f.var, cls.fields);
+    
+    // ממירים את ערכי הריצה שקיבלנו (Value[]) לביטויים (CExp[])
+    const argExps = map(valueToLitExp, args);
+
+    // מפעילים את bakeMethod על כל אחת מהמתודות של המחלקה בעזרת mapResult
+    const bakedMethodsResult = mapResult(
+        (method: Binding) => bakeMethod(method, fieldNames, argExps, env), 
+        cls.methods
+    );
+
+    // אם הכל הצליח, ניצור את האובייקט ונדחוף לתוכו את המתודות האפויות
+    return bind(bakedMethodsResult, (bakedMethods: Binding[]) =>
+        makeOk(makeObjectValue(bakedMethods)) // נדרש להגדיר makeObjectValue בקובץ L3-value
+    );
+};
+
+
+//step 4 apply procedre
+const applyProcedure = (proc: Value, args: Value[], env: Env): Result<Value> =>
+    isPrimOp(proc) ? applyPrimitive(proc, args) :
+    isClosure(proc) ? applyClosure(proc, args) :
+    isClassValue(proc) ? evalClassOperator(proc, args, env) : // <--- השורה שהוספנו!
+    makeFailure(`Bad procedure ${format(proc)}`);
+
+
+/*
+==========================GEMINI========================================
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+==========================myCode========================================
+*/
 
 // Applications are computed by substituting computed
 // values into the body of the closure.

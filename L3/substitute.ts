@@ -26,6 +26,9 @@ import { first, isNonEmptyList } from '../shared/list';
     exps = [4]
 */
 
+//body:the expressions we want to substitue - before
+//vars are local vars to look in order to substitue- like keys to search
+//epxs: what value to lit has created - that would be paste - after
 export const substitute = (body: CExp[], vars: string[], exps: CExp[]): CExp[] => {
     const subVarRef = (e: VarRef): CExp => {
         const pos = indexOf(e.var, vars);
