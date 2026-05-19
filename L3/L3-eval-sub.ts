@@ -1,14 +1,14 @@
 // L3-eval.ts
 import { map } from "ramda";
-import { isCExp, isLetExp } from "./L3-ast";
+import { isCExp, isLetExp, isClassExp} from "./L3-ast";
 import { BoolExp, CExp, Exp, IfExp, LitExp, NumExp,
-         PrimOp, ProcExp, Program, StrExp, VarDecl } from "./L3-ast";
+         PrimOp, ProcExp, Program, StrExp, VarDecl, ClassExp } from "./L3-ast";
 import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLitExp, isNumExp,
              isPrimOp, isProcExp, isStrExp, isVarRef } from "./L3-ast";
 import { makeBoolExp, makeLitExp, makeNumExp, makeProcExp, makeStrExp } from "./L3-ast";
 import { parseL3Exp } from "./L3-ast";
 import { applyEnv, makeEmptyEnv, makeEnv, Env } from "./L3-env-sub";
-import { isClosure, makeClosure, Closure, Value } from "./L3-value";
+import { isClosure, makeClosure, Closure, Value, makeClass } from "./L3-value";
 import { first, rest, isEmpty, List, isNonEmptyList } from '../shared/list';
 import { isBoolean, isNumber, isString } from "../shared/type-predicates";
 import { Result, makeOk, makeFailure, bind, mapResult, mapv } from "../shared/result";
@@ -20,7 +20,7 @@ import { format } from "../shared/format";
 
 // ========================================================
 // Eval functions
-
+//main function for evaluation AST nodes:
 const L3applicativeEval = (exp: CExp, env: Env): Result<Value> =>
     isNumExp(exp) ? makeOk(exp.val) : 
     isBoolExp(exp) ? makeOk(exp.val) :
@@ -37,6 +37,9 @@ const L3applicativeEval = (exp: CExp, env: Env): Result<Value> =>
                             (rands: Value[]) =>
                                 L3applyProcedure(rator, rands, env))) :
     isLetExp(exp) ? makeFailure('"let" not supported (yet)') :
+    //exp-->value using the class value we defined in L3-value
+    //no need to add object bc it dont have its own exp
+    isClassExp(exp) ? makeOk(makeClass(exp.fields, exp.methods)) :
     makeFailure('Never');
 
 export const isTrueValue = (x: Value): boolean =>
