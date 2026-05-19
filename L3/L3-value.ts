@@ -66,7 +66,7 @@ no need to save fields exps bc were substitute them with values in every method 
 for example (pair 3 4) is applyproc and we will see the fields and evaluate them, then immediately subsitue the expressions 3 4 with values/
 the only way user talks with object is by methods therefore fields only saved in CLASS, no in Object
 */
-export type Object = {
+export type L3Object = {
     tag: "Object";
     methods: MethodValue[];
 }

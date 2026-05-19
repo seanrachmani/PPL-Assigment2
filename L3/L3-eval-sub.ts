@@ -2,13 +2,13 @@
 import { map } from "ramda";
 import { isCExp, isLetExp, isClassExp} from "./L3-ast";
 import { BoolExp, CExp, Exp, IfExp, LitExp, NumExp,
-         PrimOp, ProcExp, Program, StrExp, VarDecl, ClassExp, Binding } from "./L3-ast";
+         PrimOp, ProcExp, Program, StrExp, VarDecl, Binding } from "./L3-ast";
 import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLitExp, isNumExp,
              isPrimOp, isProcExp, isStrExp, isVarRef } from "./L3-ast";
-import { makeBoolExp, makeLitExp, makeNumExp, makeProcExp, makeStrExp, makeBinding } from "./L3-ast";
+import { makeBoolExp, makeLitExp, makeNumExp, makeProcExp, makeStrExp} from "./L3-ast";
 import { parseL3Exp } from "./L3-ast";
 import { applyEnv, makeEmptyEnv, makeEnv, Env } from "./L3-env-sub";
-import { isClosure, makeClosure, Closure, Value, makeClass } from "./L3-value";
+import { isClosure, makeClosure, Closure, Value, makeClass, Class, L3Object, makeObject, MethodValue, isClass, isObject, isSymbolSExp  } from "./L3-value";
 import { first, rest, isEmpty, List, isNonEmptyList } from '../shared/list';
 import { isBoolean, isNumber, isString } from "../shared/type-predicates";
 import { Result, makeOk, makeFailure, bind, mapResult, mapv } from "../shared/result";
@@ -56,7 +56,11 @@ const evalProc = (exp: ProcExp, env: Env): Result<Closure> =>
 const L3applyProcedure = (proc: Value, args: Value[], env: Env): Result<Value> =>
     isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args, env) :
+    isClass(proc) ? evalObject(proc, args, env) :
+    isObject(proc) ? applyMethod(proc, args, env) :
     makeFailure(`Bad procedure ${format(proc)}`);
+
+
 
 /*
 ==========================myCode========================================
@@ -67,104 +71,54 @@ bind(something to try, what to do if allok)
 l3applicatative(exp to evaluate, env)
 substitute(what to replace, keys to replace, what to put instead )
 were renaming cexp of method aka the actual meat of the method, then looking for fields in this meat and replacing it with updatedexps from V2L
+we take the evaluated value we got from applicatative and create methos value
 */
-const evalMethod = (method: Binding, fields: string[], updatedExps: CExp[], env:Env): Result<Binding> =>
+export const evalMethod = (method: Binding, fields: string[], updatedExps: CExp[], env:Env): Result<MethodValue> =>
     bind(L3applicativeEval(substitute(renameExps([method.val]), fields, updatedExps)[0], env),    
-    (evaluatedValue: Value) => makeOk(makeBinding(method.var.var, valueToLitExp(evaluatedValue))));
-    
+    (evaluatedValue: Value) => makeOk({name: method.var.var, val: evaluatedValue}));
 
 
 
 
 /*
-==========================GEMINI========================================
+this function will be called from applyproc so we already evalauated class(operator) and L3args(operands),
+thats bc the order is; rator->rands->apply(and thats what we give it as params)
+
+*/
+//this takes class operator and evaluate it as Object    
+export const evalObject = (classOp: Class, L3args: Value[], env: Env): Result<Value> =>
+    classOp.fields.length !== L3args.length ? makeFailure("no enough arguments have been passed to class fields") :
+    bind(mapResult((method: Binding)=> 
+                                    evalMethod(method, classOp.fields.map(field => field.var), L3args.map(valueToLitExp), env), classOp.methods),
+                                    (evaluatedMethods: MethodValue[]) => makeOk(makeObject(evaluatedMethods)));
+
+
+
+/*
+In order to ‘call’ method, the object should be applied with a symbol:
+in this stage rator and rands alreay evaluated.
+
+(p34 'first)
+( appexp, export type AppExp = {tag: "AppExp"; rator: CExp; rands: CExp[]; }
+p34 is the operator so CExp by definition of appexp, but parseL3Atomic making it Varref which exp, then we evaluate it to Object
+'first are rands: cexp[] with 1 elemnt, cexp that parser make litexp that contains symbokexp evaluated to the value of the string after ' symbol
+
+ L3applyProcedure(method.val, args.slice(1), env) : 
+method might be operator and then: method val is closure  and
+args.slice(1) is parameters for method if parms exists for this fucntion
+
 */
 
 
-
-
-//step3 create object\
-export const evalClassOperator = (cls: ClassValue, args: Value[], env: Env): Result<Value> => {
-    // מוודאים שקיבלנו את מספר הארגומנטים הנכון עבור השדות
-    if (cls.fields.length !== args.length) {
-        return makeFailure(`Wrong number of arguments passed to class`);
-    }
-
-    // שולפים את המחרוזות של שמות השדות (למשל: ['a', 'b'])
-    const fieldNames = map((f: VarDecl) => f.var, cls.fields);
-    
-    // ממירים את ערכי הריצה שקיבלנו (Value[]) לביטויים (CExp[])
-    const argExps = map(valueToLitExp, args);
-
-    // מפעילים את bakeMethod על כל אחת מהמתודות של המחלקה בעזרת mapResult
-    const bakedMethodsResult = mapResult(
-        (method: Binding) => bakeMethod(method, fieldNames, argExps, env), 
-        cls.methods
-    );
-
-    // אם הכל הצליח, ניצור את האובייקט ונדחוף לתוכו את המתודות האפויות
-    return bind(bakedMethodsResult, (bakedMethods: Binding[]) =>
-        makeOk(makeObjectValue(bakedMethods)) // נדרש להגדיר makeObjectValue בקובץ L3-value
-    );
+export const applymethod = (obj: L3Object, args: Value[], env: Env): Result<Value> => {
+    if (!isSymbolSExp(args[0])) return makeFailure("no symbol as required for method call");
+    const methodName = args[0].val;
+    const method = obj.methods.find(method => method.name === methodName);
+    if (!method) return makeFailure(`Unrecognized method: ${methodName}`);
+    return args.length > 1 
+        ? L3applyProcedure(method.val, args.slice(1), env) 
+        : makeOk(method.val);
 };
-
-
-//step 4 apply procedre
-const applyProcedure = (proc: Value, args: Value[], env: Env): Result<Value> =>
-    isPrimOp(proc) ? applyPrimitive(proc, args) :
-    isClosure(proc) ? applyClosure(proc, args) :
-    isClassValue(proc) ? evalClassOperator(proc, args, env) : // <--- השורה שהוספנו!
-    makeFailure(`Bad procedure ${format(proc)}`);
-
-
-/*
-==========================GEMINI========================================
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /*
 ==========================myCode========================================
