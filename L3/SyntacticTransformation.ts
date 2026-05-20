@@ -21,7 +21,10 @@ export const methods2if = (methods: Binding[]) : CExp =>
         //test:   //makeappexp
         makeAppExp(makePrimOp("eq?"), [makeVarRef("msg"), makeLitExp({tag: "SymbolSExp", val: methods[0].var.var})]),
         //then, else:
-        methods[0].val, methods2if(methods.slice(1)));
+        //method[0].val is cexp, methos[0].val.body s proc body and methods[0].val.body[0] is the only elemnt in proc body
+        isProcExp(methods[0].val) ? methods[0].val.body[0] : methods[0].val,
+        //else:
+        methods2if(methods.slice(1)));
 
 
 
@@ -49,7 +52,7 @@ export const transformCExp = (exp: CExp): CExp =>
     isLetExp(exp)   ? makeLetExp(map((b: Binding) => makeBinding(b.var.var,transformCExp(b.val)), exp.bindings), map(transformCExp, exp.body)) :
     exp;
 
-    
+
 //helper function2 for EXP (define / cexp) 
 //it treats define
 export const transformExp = (exp: Exp): Exp =>
