@@ -8,7 +8,7 @@ import { isAppExp, isBoolExp, isDefineExp, isIfExp, isLitExp, isNumExp,
 import { makeBoolExp, makeLitExp, makeNumExp, makeProcExp, makeStrExp} from "./L3-ast";
 import { parseL3Exp } from "./L3-ast";
 import { applyEnv, makeEmptyEnv, makeEnv, Env } from "./L3-env-sub";
-import { isClosure, makeClosure, Closure, Value, makeClass, Class, L3Object, makeObject, MethodValue, isClass, isObject, isSymbolSExp  } from "./L3-value";
+import { isClosure, makeClosure, Closure, Value, makeClass, Class, L3Object, makeObject, MethodValue, isClass, isObject, isSymbolSExp, makeMethodValue  } from "./L3-value";
 import { first, rest, isEmpty, List, isNonEmptyList } from '../shared/list';
 import { isBoolean, isNumber, isString } from "../shared/type-predicates";
 import { Result, makeOk, makeFailure, bind, mapResult, mapv } from "../shared/result";
@@ -58,7 +58,7 @@ const L3applyProcedure = (proc: Value, args: Value[], env: Env): Result<Value> =
     isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args, env) :
     isClass(proc) ? evalObject(proc, args, env) :
-    isObject(proc) ? applyMethod(proc as L3Object, args, env) :
+    isObject(proc) ? applyMethod(proc, args, env) :
     makeFailure(`Bad procedure ${format(proc)}`);
 
 
@@ -76,7 +76,7 @@ we take the evaluated value we got from applicatative and create methos value
 */
 export const evalMethod = (method: Binding, fields: string[], updatedExps: CExp[], env:Env): Result<MethodValue> =>
     bind(L3applicativeEval(substitute(renameExps([method.val]), fields, updatedExps)[0], env),    
-    (evaluatedValue: Value) => makeOk({name: method.var.var, val: evaluatedValue}));
+    (evaluatedValue: Value) => makeOk(makeMethodValue(method.var.var, evaluatedValue)));
 
 
 

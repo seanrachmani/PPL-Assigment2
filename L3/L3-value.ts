@@ -45,6 +45,7 @@ export type SymbolSExp = {
 /*
 ==========================myCode========================================
 */
+//substitutional model
 //type of class value
 export type Class = {
     tag: "Class";
@@ -79,13 +80,31 @@ export type MethodValue = {
 export const makeObject = (methods: MethodValue[]): L3Object =>
     ({tag: "Object", methods: methods})
 
-export const isObject = (x:any): x is Object => x.tag === "Object";
+export const isObject = (x:any): x is L3Object => x != null && x.tag === "Object";
+
+export const makeMethodValue = (name: string, val: Value): MethodValue =>
+    ({ name: name, val: val });
+
+
+
+
+//enviorment model
+export type ClassEnv = {
+    tag: "ClassEnv";
+    fields: VarDecl[];
+    methods: Binding[];
+    env: Env;
+}
+export const makeClassEnv = (fields: VarDecl[], methods: Binding[], env: Env): ClassEnv =>
+    ({tag: "ClassEnv", fields: fields, methods: methods, env: env});
+
+export const isClassEnv = (x: any): x is ClassEnv => x.tag === "ClassEnv";
 
 /*
 ==========================myCode========================================
 */
 export type SExpValue = number | boolean | string | PrimOp | Closure | SymbolSExp | EmptySExp | CompoundSExp 
-                        | Class | L3Object;
+                        | Class | L3Object | ClassEnv;
 export const isSExp = (x: any): x is SExpValue =>
     typeof(x) === 'string' || typeof(x) === 'boolean' || typeof(x) === 'number' ||
     isSymbolSExp(x) || isCompoundSExp(x) || isEmptySExp(x) || isPrimOp(x) || isClosure(x) || isClass(x) || isObject(x);

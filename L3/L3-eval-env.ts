@@ -5,9 +5,9 @@ import { map } from "ramda";
 import { isBoolExp, isCExp, isLitExp, isNumExp, isPrimOp, isStrExp, isVarRef,
          isAppExp, isDefineExp, isIfExp, isLetExp, isProcExp,
          Binding, VarDecl, CExp, Exp, IfExp, LetExp, ProcExp, Program,
-         parseL3Exp,  DefineExp} from "./L3-ast";
+         parseL3Exp,  DefineExp, isClassExp} from "./L3-ast";
 import { applyEnv, makeEmptyEnv, makeExtEnv, Env } from "./L3-env-env";
-import { isClosure, makeClosureEnv, Closure, Value } from "./L3-value";
+import { isClosure, makeClosureEnv, Closure, Value, makeClassEnv, isClassEnv, isObject, ClassEnv, makeMethodValue, MethodValue, makeObject } from "./L3-value";
 import { applyPrimitive } from "./evalPrimitive";
 import { allT, first, rest, isEmpty, isNonEmptyList } from "../shared/list";
 import { Result, makeOk, makeFailure, bind, mapResult } from "../shared/result";
@@ -33,6 +33,7 @@ const applicativeEval = (exp: CExp, env: Env): Result<Value> =>
                            applicativeEval(rand, env), exp.rands),
                               (args: Value[]) =>
                                  applyProcedure(proc, args))) :
+    isClassExp(exp) ? makeOk(makeClassEnv(exp.fields, exp.methods, env)) :
     makeFailure('"let" not supported (yet)');
 
 export const isTrueValue = (x: Value): boolean =>
@@ -51,7 +52,78 @@ const evalProc = (exp: ProcExp, env: Env): Result<Closure> =>
 const applyProcedure = (proc: Value, args: Value[]): Result<Value> =>
     isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args) :
+    isClassEnv(proc) ? applyClass(proc, args) :
+    isObject(proc) ? applymethod(proc, args) :
     makeFailure(`Bad procedure ${format(proc)}`);
+
+
+/*
+==========================myCode========================================
+*/
+
+
+//create new env (vars names, vars values, father env)
+//this function creates env with specific classval fields vars, values, env
+//map gives us list of fields as strings
+const makeClsEnv = (classVal: ClassEnv, args: Value[]) =>
+    makeExtEnv(map((vard: VarDecl) => vard.var, classVal.fields), args, classVal.env);
+
+
+
+
+//we call this when we have new ovject instance(we have (pair 3 4) and pair is class operator)
+//bind(try, ehat to do if ok)
+//go throgh methods,  eval them using applicatative eval, make env, and if  good makeMethod.
+//if we succed eval all methods make object
+
+const applyClass = (classVal: ClassEnv, args: Value[]): Result<Value> =>
+    classVal.fields.length !== args.length ? makeFailure("Incorrect number of arguments for class") :
+    bind(
+        mapResult(
+            (method: Binding) => 
+            bind(
+                //*****method.val here is binding from ast! and itscexp we send for evaluation and then we get closure****
+                applicativeEval(method.val, makeClsEnv(classVal, args)),
+                (evaluatedMet: Value) => makeOk(makeMethodValue(method.var.var,evaluatedMet))
+                )
+            ,classVal.methods), //this is where to mapresultfrom. then mapresult created methodValue[] and we can create object:
+        (evaluatedMethods: MethodValue[]) => makeOk(makeObject(evaluatedMethods)) // this is or first bind
+    );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    const applyMethod = (obj: L3Object, args: Value[]): Result<Value> =>
+    args.length === 0 ? makeFailure("Method call requires at least one argument") :
+    ((firstArg: Value) => 
+        !isSymbolSExp(firstArg) ? makeFailure("Method name must be a symbol") :
+        ((method: MethodValue | undefined) => 
+            method ? applyProcedure(method.val, rest(args)) : 
+            makeFailure(`Unrecognized method: ${firstArg.val}`)
+        )(obj.methods.find((m: MethodValue) => m.name === firstArg.val))
+    )(first(args));
+/*
+==========================myCode========================================
+*/
+
+
+
+
+
 
 const applyClosure = (proc: Closure, args: Value[]): Result<Value> => {
     const vars = map((v: VarDecl) => v.var, proc.params);
