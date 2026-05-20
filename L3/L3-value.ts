@@ -150,4 +150,5 @@ export const valueToString = (val: Value): string =>
     isCompoundSExp(val) ? compoundSExpToString(val) :
     isClass(val) ? "Class" :
     isObject(val) ? "Object" :
+    isClassEnv(val) ? "Class" :
     val;

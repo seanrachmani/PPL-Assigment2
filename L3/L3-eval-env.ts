@@ -7,7 +7,7 @@ import { isBoolExp, isCExp, isLitExp, isNumExp, isPrimOp, isStrExp, isVarRef,
          Binding, VarDecl, CExp, Exp, IfExp, LetExp, ProcExp, Program,
          parseL3Exp,  DefineExp, isClassExp} from "./L3-ast";
 import { applyEnv, makeEmptyEnv, makeExtEnv, Env } from "./L3-env-env";
-import { isClosure, makeClosureEnv, Closure, Value, makeClassEnv, isClassEnv, isObject, ClassEnv, makeMethodValue, MethodValue, makeObject } from "./L3-value";
+import { isClosure, makeClosureEnv, Closure, Value, makeClassEnv, isClassEnv, isObject, ClassEnv, makeMethodValue, MethodValue, makeObject, L3Object, isSymbolSExp } from "./L3-value";
 import { applyPrimitive } from "./evalPrimitive";
 import { allT, first, rest, isEmpty, isNonEmptyList } from "../shared/list";
 import { Result, makeOk, makeFailure, bind, mapResult } from "../shared/result";
@@ -53,7 +53,7 @@ const applyProcedure = (proc: Value, args: Value[]): Result<Value> =>
     isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args) :
     isClassEnv(proc) ? applyClass(proc, args) :
-    isObject(proc) ? applymethod(proc, args) :
+    isObject(proc) ? applyMethod(proc, args) :
     makeFailure(`Bad procedure ${format(proc)}`);
 
 
@@ -95,27 +95,17 @@ const applyClass = (classVal: ClassEnv, args: Value[]): Result<Value> =>
 
 
 
+//(p34 'first)
+//same as sub but this time closure has enc so no ned to applyProc with env param
+export const applyMethod = (obj: L3Object, args: Value[]): Result<Value> => {
+    if (!isSymbolSExp(args[0])) return makeFailure("no symbol as required for method call");
+    const methodName = args[0].val;
+    const method = obj.methods.find(method => method.name === methodName);
+    if (!method) return makeFailure(`Unrecognized method: ${methodName}`);
+    return applyProcedure(method.val, args.slice(1));
+};
 
 
-
-
-
-
-
-
-
-
-
-
-    const applyMethod = (obj: L3Object, args: Value[]): Result<Value> =>
-    args.length === 0 ? makeFailure("Method call requires at least one argument") :
-    ((firstArg: Value) => 
-        !isSymbolSExp(firstArg) ? makeFailure("Method name must be a symbol") :
-        ((method: MethodValue | undefined) => 
-            method ? applyProcedure(method.val, rest(args)) : 
-            makeFailure(`Unrecognized method: ${firstArg.val}`)
-        )(obj.methods.find((m: MethodValue) => m.name === firstArg.val))
-    )(first(args));
 /*
 ==========================myCode========================================
 */
