@@ -32,6 +32,7 @@ const L3applicativeEval = (exp: CExp, env: Env): Result<Value> =>
     isProcExp(exp) ? evalProc(exp, env) :
         //exp-->value using the class value we defined in L3-value
     //no need to add object bc it dont have its own exp
+    //used when we define class: (class (a b) ((first....)))
     isClassExp(exp) ? makeOk(makeClass(exp.fields, exp.methods)) :
     isAppExp(exp) ? bind(L3applicativeEval(exp.rator, env), (rator: Value) =>
                         bind(mapResult(param => 
@@ -79,11 +80,10 @@ export const evalMethod = (method: Binding, fields: string[], updatedExps: CExp[
 
 
 
-
 /*
 this function will be called from applyproc so we already evalauated class(operator) and L3args(operands),
 thats bc the order is; rator->rands->apply(and thats what we give it as params)
-
+(pair 3 4)
 */
 //this takes class operator and evaluate it as Object    
 export const evalObject = (classOp: Class, L3args: Value[], env: Env): Result<Value> =>
@@ -92,6 +92,7 @@ export const evalObject = (classOp: Class, L3args: Value[], env: Env): Result<Va
                                     evalMethod(method, classOp.fields.map(field => field.var), L3args.map(valueToLitExp), env), classOp.methods),
                                     (evaluatedMethods: MethodValue[]) => makeOk(makeObject(evaluatedMethods)));
 
+                                    
 
 
 /*
@@ -106,17 +107,14 @@ p34 is the operator so CExp by definition of appexp, but parseL3Atomic making it
  L3applyProcedure(method.val, args.slice(1), env) : 
 method might be operator and then: method val is closure  and
 args.slice(1) is parameters for method if parms exists for this fucntion
-
+if no parmaeters slice return empty  and we evaluate lambda with no params
 */
-
-
 export const applyMethod = (obj: L3Object, args: Value[], env: Env): Result<Value> => {
     if (!isSymbolSExp(args[0])) return makeFailure("no symbol as required for method call");
     const methodName = args[0].val;
     const method = obj.methods.find(method => method.name === methodName);
     if (!method) return makeFailure(`Unrecognized method: ${methodName}`);
-    return args.length > 1 ? L3applyProcedure(method.val, args.slice(1), env) : 
-                                makeOk(method.val);
+    return L3applyProcedure(method.val, args.slice(1), env);
 };
 
 /*
