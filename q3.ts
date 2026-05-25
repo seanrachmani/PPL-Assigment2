@@ -40,7 +40,7 @@ const translateAppExp = (exp: AppExp): Result<string> => {
             makeOk(`(${rands.join(` ${pyOp} `)})`));
     }
     
-    //lambadas exp(strings)
+    //lambadas exp(strings) - SOMETHING THE USER DEFINED
     return bind(l2ToPython(exp.rator), (rator: string) =>
             bind(mapResult(l2ToPython, exp.rands), (rands: string[]) =>
                 makeOk(`${rator}(${rands.join(",")})`)));
